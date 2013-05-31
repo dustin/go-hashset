@@ -93,6 +93,7 @@ func (hs *Hashset) Len() int {
 func (hs *Hashset) Iter() <-chan []byte {
 	ch := make(chan []byte)
 	go func() {
+		defer close(ch)
 		l := hs.size - 2
 		for pre, p := range hs.things {
 			for i := 0; i < len(p)/l; i++ {
@@ -103,7 +104,6 @@ func (hs *Hashset) Iter() <-chan []byte {
 				ch <- rv
 			}
 		}
-		close(ch)
 	}()
 	return ch
 }
