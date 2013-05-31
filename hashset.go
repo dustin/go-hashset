@@ -17,13 +17,17 @@ func (p *hashSorter) Len() int {
 }
 
 func (p *hashSorter) Less(i, j int) bool {
-	return bytes.Compare(p.hashes[i:i+p.size], p.hashes[j:j+p.size]) < 0
+	ioff := i * p.size
+	joff := j * p.size
+	return bytes.Compare(p.hashes[ioff:ioff+p.size], p.hashes[joff:joff+p.size]) < 0
 }
 
 func (p *hashSorter) Swap(i, j int) {
-	copy(p.buf, p.hashes[i:i+p.size])
-	copy(p.hashes[i:i+p.size], p.hashes[j:j+p.size])
-	copy(p.hashes[j:j+p.size], p.buf)
+	ioff := i * p.size
+	joff := j * p.size
+	copy(p.buf, p.hashes[ioff:ioff+p.size])
+	copy(p.hashes[ioff:ioff+p.size], p.hashes[joff:joff+p.size])
+	copy(p.hashes[joff:joff+p.size], p.buf)
 }
 
 // Store the hashes.
@@ -60,9 +64,15 @@ func (hs *Hashset) Add(h []byte) {
 func (hs *Hashset) Contains(h []byte) bool {
 	n := int(binary.BigEndian.Uint16(h))
 	bin := hs.things[n]
+	if len(bin) == 0 {
+		return false
+	}
 	sub := h[2:]
 	pos := sort.Search(len(bin)/(hs.size-2), func(i int) bool {
-		return bytes.Compare(bin[i:i+hs.size-2], sub) <= 0
+		off := i * (hs.size - 2)
+		rv := bytes.Compare(bin[off:off+hs.size-2], sub) >= 0
+		return rv
 	})
-	return bytes.Equal(sub, bin[pos:])
+	off := pos * (hs.size - 2)
+	return off < len(bin) && bytes.Equal(sub, bin[off:off+hs.size-2])
 }

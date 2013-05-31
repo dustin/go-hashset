@@ -1,8 +1,10 @@
 package hashset
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"io"
+	"log"
 	"math/rand"
 	"testing"
 )
@@ -36,8 +38,9 @@ func TestSet(t *testing.T) {
 	randomSrc := &randomDataMaker{rand.NewSource(1028890720402726901)}
 
 	// Enough hashes to surely hit all the cases
-	buf := make([]byte, 20)
 	for i := 0; i < 65535*5; i++ {
+		buf := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 		_, err := io.ReadFull(randomSrc, buf)
 		if err != nil {
 			panic(err)
@@ -58,6 +61,15 @@ func TestSet(t *testing.T) {
 		if !hs.Contains(h) {
 			t.Errorf("Expected to have example %s",
 				hex.EncodeToString(h))
+			n := int(binary.BigEndian.Uint16(h))
+			bin := hs.things[n]
+			l := len(h) - 2
+			for i := 0; i < len(bin)/l; i++ {
+				off := i * l
+				log.Printf("  not %x", bin[off:off+l])
+			}
+			t.FailNow()
+
 		}
 	}
 	for _, h := range samples {
