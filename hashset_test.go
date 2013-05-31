@@ -32,6 +32,41 @@ func (r *randomDataMaker) Read(p []byte) (n int, err error) {
 	}
 }
 
+func d(h string) []byte {
+	rv, err := hex.DecodeString(h)
+	if err != nil {
+		panic(err)
+	}
+	return rv
+}
+
+func TestLen(t *testing.T) {
+	hs := Hashset{}
+	if hs.Len() != 0 {
+		t.Fatalf("Expected len == 0, got %v", hs.Len())
+	}
+
+	hs.Add(d("c9adad8f9201c0cdcf68d0023b16f4979eb799c0"))
+	if hs.Len() != 1 {
+		t.Fatalf("Expected len == 1, got %v", hs.Len())
+	}
+
+	hs.Add(d("c9adad8f9201c0cdcf68d2023b16f4979eb799c0"))
+	if hs.Len() != 2 {
+		t.Fatalf("Expected len == 2, got %v", hs.Len())
+	}
+
+	hs.Add(d("c9adad8f9201c0cdcf68d2023b16f4979eb799c0"))
+	if hs.Len() != 2 {
+		t.Fatalf("Expected len == 2, got %v", hs.Len())
+	}
+
+	hs.Add(d("d9adad8f9201c0cdcf68d2023b16f4979eb799c0"))
+	if hs.Len() != 3 {
+		t.Fatalf("Expected len == 2, got %v", hs.Len())
+	}
+}
+
 func TestSet(t *testing.T) {
 	samples := [][]byte{}
 

@@ -76,3 +76,12 @@ func (hs *Hashset) Contains(h []byte) bool {
 	off := pos * (hs.size - 2)
 	return off < len(bin) && bytes.Equal(sub, bin[off:off+hs.size-2])
 }
+
+// How many things we've got.
+func (hs *Hashset) Len() int {
+	rv := 0
+	for _, a := range hs.things {
+		rv += (len(a) / (hs.size - 2))
+	}
+	return rv
+}
