@@ -85,3 +85,25 @@ func (hs *Hashset) Len() int {
 	}
 	return rv
 }
+
+// Return a channel that emits all stored hashes.
+//
+// As this returns a channel, the caller is expected to drain the
+// channel completely.
+func (hs *Hashset) Iter() <-chan []byte {
+	ch := make(chan []byte)
+	go func() {
+		l := hs.size - 2
+		for pre, p := range hs.things {
+			for i := 0; i < len(p)/l; i++ {
+				off := i * l
+				rv := make([]byte, hs.size)
+				binary.BigEndian.PutUint16(rv, uint16(pre))
+				copy(rv[2:], p[off:])
+				ch <- rv
+			}
+		}
+		close(ch)
+	}()
+	return ch
+}

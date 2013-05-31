@@ -1,6 +1,7 @@
 package hashset
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"io"
@@ -64,6 +65,40 @@ func TestLen(t *testing.T) {
 	hs.Add(d("d9adad8f9201c0cdcf68d2023b16f4979eb799c0"))
 	if hs.Len() != 3 {
 		t.Fatalf("Expected len == 2, got %v", hs.Len())
+	}
+}
+
+func TestIter(t *testing.T) {
+	someHashes := [][]byte{
+		d("c9adad8f9201c0cdcf68d0023b16f4979eb799c0"),
+		d("d9adad8f9201c0cdcf68d2023b16f4979eb799c0"),
+		d("c9adad8f9201c0cdcf68d2023b16f4979eb799c0"),
+		d("c9adad8f9201c0cdcf68d2023b16f4979eb799c0"),
+	}
+
+	exp := [][]byte{
+		d("c9adad8f9201c0cdcf68d0023b16f4979eb799c0"),
+		d("c9adad8f9201c0cdcf68d2023b16f4979eb799c0"),
+		d("d9adad8f9201c0cdcf68d2023b16f4979eb799c0"),
+	}
+
+	hs := Hashset{}
+	for _, h := range someHashes {
+		hs.Add(h)
+	}
+
+	chi := hs.Iter()
+	for i, e := range exp {
+		got := <-chi
+		if !bytes.Equal(e, got) {
+			t.Errorf("Expected %x at %v, got %x", e, i, got)
+		}
+	}
+
+	got, ok := <-chi
+	if ok {
+		t.Fatalf("Expected failure to read after iter, got %x",
+			got)
 	}
 }
 
