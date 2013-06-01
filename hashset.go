@@ -4,6 +4,7 @@ package hashset
 import (
 	"bytes"
 	"encoding/binary"
+	"io"
 	"sort"
 )
 
@@ -106,4 +107,43 @@ func (hs *Hashset) Iter() <-chan []byte {
 		}
 	}()
 	return ch
+}
+
+// Persist this hashset to the given writer.
+//
+// Returns the number of bytes written and an error if any.
+func (hs *Hashset) Write(w io.Writer) (int64, error) {
+	var written int64
+	l := hs.size - 2
+	buf := make([]byte, hs.size)
+	for pre, p := range hs.things {
+		for i := 0; i < len(p)/l; i++ {
+			off := i * l
+			binary.BigEndian.PutUint16(buf, uint16(pre))
+			copy(buf[2:], p[off:])
+			n, e := w.Write(buf)
+			written += int64(n)
+			if e != nil {
+				return written, e
+			}
+		}
+	}
+	return written, nil
+}
+
+// Load hashes from a reader.
+//
+// The size of the hash must be known ahead of time.
+func Load(size int, r io.Reader) (*Hashset, error) {
+	hs := &Hashset{}
+	for {
+		buf := make([]byte, size)
+		if _, err := io.ReadFull(r, buf); err != nil {
+			if err == io.EOF {
+				err = nil
+			}
+			return hs, err
+		}
+		hs.Add(buf)
+	}
 }

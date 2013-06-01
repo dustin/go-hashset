@@ -5,12 +5,11 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"io"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"testing"
 )
-
-var samples [][]byte
 
 type randomDataMaker struct {
 	src rand.Source
@@ -102,6 +101,64 @@ func TestIter(t *testing.T) {
 	}
 }
 
+func TestWrite(t *testing.T) {
+	someHashes := [][]byte{
+		d("c9adad8f9201c0cdcf68d0023b16f4979eb799c0"),
+		d("d9adad8f9201c0cdcf68d2023b16f4979eb799c0"),
+		d("c9adad8f9201c0cdcf68d2023b16f4979eb799c0"),
+	}
+
+	hs := Hashset{}
+	for _, h := range someHashes {
+		hs.Add(h)
+	}
+
+	buf := &bytes.Buffer{}
+	n, err := hs.Write(buf)
+	if err != nil {
+		t.Fatalf("Error writing buffer: %v", err)
+	}
+	if n != 60 {
+		t.Fatalf("Expected to write 60 bytes, wrote %v", n)
+	}
+
+	exp := []byte{}
+	for b := range hs.Iter() {
+		exp = append(exp, b...)
+	}
+
+	if !bytes.Equal(buf.Bytes(), exp) {
+		t.Fatalf("Expected\n%x, got\n%x", exp, buf.Bytes())
+	}
+}
+
+func TestRead(t *testing.T) {
+	someHashes := [][]byte{
+		d("c9adad8f9201c0cdcf68d0023b16f4979eb799c0"),
+		d("c9adad8f9201c0cdcf68d2023b16f4979eb799c0"),
+		d("d9adad8f9201c0cdcf68d2023b16f4979eb799c0"),
+	}
+	stuff := []byte{}
+	for _, b := range someHashes {
+		stuff = append(stuff, b...)
+	}
+	hs, err := Load(20, bytes.NewReader(stuff))
+	if err != nil {
+		t.Fatalf("Error reading hashes: %v", err)
+	}
+	if hs.Len() != 3 {
+		t.Fatalf("Expected 3 hashes, got %v", hs.Len())
+	}
+
+	chi := hs.Iter()
+	for i, e := range someHashes {
+		got := <-chi
+		if !bytes.Equal(e, got) {
+			t.Errorf("Expected %x at %v, got %x", e, i, got)
+		}
+	}
+}
+
 func TestSet(t *testing.T) {
 	samples := [][]byte{}
 
@@ -167,8 +224,14 @@ func BenchmarkSet(b *testing.B) {
 	}
 }
 
-func BenchmarkFind(b *testing.B) {
-	hs := Hashset{}
+var aBigHashset *Hashset
+
+func initTestHashset() {
+	if aBigHashset != nil {
+		return
+	}
+
+	aBigHashset = &Hashset{}
 	randomSrc := &randomDataMaker{rand.NewSource(1028890720402726901)}
 
 	h := make([]byte, 20)
@@ -177,15 +240,40 @@ func BenchmarkFind(b *testing.B) {
 		if err != nil {
 			panic(err)
 		}
-		hs.Add(h)
+		aBigHashset.Add(h)
 	}
+}
+
+func BenchmarkFind(b *testing.B) {
+	randomSrc := &randomDataMaker{rand.NewSource(1028890720402726901)}
+	initTestHashset()
 	b.ResetTimer()
 
+	h := make([]byte, 20)
 	for i := 0; i < b.N; i++ {
 		_, err := io.ReadFull(randomSrc, h)
 		if err != nil {
 			panic(err)
 		}
-		hs.Contains(h)
+		aBigHashset.Contains(h)
+	}
+}
+
+func BenchmarkWrite(b *testing.B) {
+	initTestHashset()
+	b.SetBytes(int64(aBigHashset.Len() * 20))
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		aBigHashset.Write(ioutil.Discard)
+	}
+}
+
+func BenchmarkRead(b *testing.B) {
+	randomSrc := &randomDataMaker{rand.NewSource(1028890720402726901)}
+	b.SetBytes(int64(20 * b.N))
+	_, err := Load(20, io.LimitReader(randomSrc, int64(20*b.N)))
+	if err != nil {
+		b.Fatalf("Error reading at %v", b.N)
 	}
 }
