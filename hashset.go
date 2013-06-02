@@ -156,21 +156,36 @@ func (hs *Hashset) AddAll(o *Hashset) {
 }
 
 // Compute the intersection of a bunch of Hashsets.
-func Intersection(sets ...*Hashset) *Hashset {
-	rv := &Hashset{}
-	for a := range sets[0].Iter() {
-		found := true
-		for _, hs := range sets[1:] {
-			if !hs.Contains(a) {
-				found = false
+func Intersection(base *Hashset, sets ...*Hashset) *Hashset {
+	rv := &Hashset{size: base.size, sortbuf: make([]byte, base.size)}
+
+	l := base.size - 2
+	for pre, bin := range base.things {
+		for i := 0; i < len(bin)/l; i++ {
+			found := true
+			off := i * l
+			sub := bin[off : off+l]
+			for _, hs := range sets {
+				hbin := hs.things[pre]
+				thisSize := len(hbin) / l
+				pos := sort.Search(thisSize, func(p int) bool {
+					o := p * l
+					return bytes.Compare(hbin[o:o+l], sub) >= 0
+				})
+				off = pos * l
+				if !(off < (thisSize*l) &&
+					bytes.Equal(sub, hbin[off:off+l])) {
+					found = false
+					break
+				}
+			}
+			if found {
+				rv.things[pre] = append(rv.things[pre], sub...)
 			}
 		}
-		if found {
-			rv.Add(a)
-		}
 	}
-	return rv
 
+	return rv
 }
 
 // Deep copy this hashset.

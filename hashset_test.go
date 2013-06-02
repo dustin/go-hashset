@@ -255,7 +255,7 @@ func TestIntersection(t *testing.T) {
 		}
 	}
 
-	intersected := Intersection(hss...)
+	intersected := Intersection(hss[0], hss[1:]...)
 	if intersected.Len() == 0 {
 		t.Fatalf("Intersected to 0")
 	}
@@ -266,6 +266,32 @@ func TestIntersection(t *testing.T) {
 				t.Errorf("%x is missing from the %vth", h, i)
 			}
 		}
+	}
+}
+
+func BenchmarkIntersection(b *testing.B) {
+	b.StopTimer()
+
+	randomSrc := &randomDataMaker{rand.NewSource(1028890720402726901)}
+	hss := []*Hashset{&Hashset{}, &Hashset{},
+		&Hashset{}, &Hashset{}}
+
+	// Enough hashes to surely hit all the cases
+	for i := 0; i < 65535*5; i++ {
+		buf := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+		_, err := io.ReadFull(randomSrc, buf)
+		if err != nil {
+			panic(err)
+		}
+		for j := 0; j <= rand.Intn(len(hss)); j++ {
+			hss[j].Add(buf)
+		}
+	}
+
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		Intersection(hss[0], hss[1:]...)
 	}
 }
 
