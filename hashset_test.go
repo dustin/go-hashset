@@ -237,6 +237,38 @@ func TestUnion(t *testing.T) {
 	}
 }
 
+func TestIntersection(t *testing.T) {
+	randomSrc := &randomDataMaker{rand.NewSource(1028890720402726901)}
+	hss := []*Hashset{&Hashset{}, &Hashset{},
+		&Hashset{}, &Hashset{}}
+
+	// Enough hashes to surely hit all the cases
+	for i := 0; i < 65535*5; i++ {
+		buf := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+		_, err := io.ReadFull(randomSrc, buf)
+		if err != nil {
+			panic(err)
+		}
+		for j := 0; j <= rand.Intn(len(hss)); j++ {
+			hss[j].Add(buf)
+		}
+	}
+
+	intersected := Intersection(hss...)
+	if intersected.Len() == 0 {
+		t.Fatalf("Intersected to 0")
+	}
+
+	for h := range intersected.Iter() {
+		for i, hs := range hss {
+			if !hs.Contains(h) {
+				t.Errorf("%x is missing from the %vth", h, i)
+			}
+		}
+	}
+}
+
 func TestCopy(t *testing.T) {
 	initTestHashset()
 

@@ -155,6 +155,24 @@ func (hs *Hashset) AddAll(o *Hashset) {
 	}
 }
 
+// Compute the intersection of a bunch of Hashsets.
+func Intersection(sets ...*Hashset) *Hashset {
+	rv := &Hashset{}
+	for a := range sets[0].Iter() {
+		found := true
+		for _, hs := range sets[1:] {
+			if !hs.Contains(a) {
+				found = false
+			}
+		}
+		if found {
+			rv.Add(a)
+		}
+	}
+	return rv
+
+}
+
 // Deep copy this hashset.
 func (hs *Hashset) Copy() *Hashset {
 	rv := &Hashset{sortbuf: make([]byte, hs.size), size: hs.size}
