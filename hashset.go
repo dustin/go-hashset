@@ -69,13 +69,13 @@ func (hs *Hashset) Contains(h []byte) bool {
 		return false
 	}
 	sub := h[2:]
-	pos := sort.Search(len(bin)/(hs.size-2), func(i int) bool {
-		off := i * (hs.size - 2)
-		rv := bytes.Compare(bin[off:off+hs.size-2], sub) >= 0
-		return rv
+	l := hs.size - 2
+	pos := sort.Search(len(bin)/l, func(i int) bool {
+		off := i * l
+		return bytes.Compare(bin[off:off+l], sub) >= 0
 	})
-	off := pos * (hs.size - 2)
-	return off < len(bin) && bytes.Equal(sub, bin[off:off+hs.size-2])
+	off := pos * l
+	return off < len(bin) && bytes.Equal(sub, bin[off:off+l])
 }
 
 // How many things we've got.
