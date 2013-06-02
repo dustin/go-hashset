@@ -177,3 +177,13 @@ func (hs *Hashset) AddAll(o *Hashset) {
 		sort.Sort(&sorter)
 	}
 }
+
+// Deep copy this hashset.
+func (hs *Hashset) Copy() *Hashset {
+	rv := &Hashset{sortbuf: make([]byte, hs.size), size: hs.size}
+	for i, p := range hs.things {
+		rv.things[i] = make([]byte, len(p))
+		copy(rv.things[i], p)
+	}
+	return rv
+}

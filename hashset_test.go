@@ -206,7 +206,6 @@ func TestSet(t *testing.T) {
 				hex.EncodeToString(h))
 		}
 	}
-
 }
 
 func TestUnion(t *testing.T) {
@@ -234,6 +233,17 @@ func TestUnion(t *testing.T) {
 	for _, h := range samples {
 		if !hss[0].Contains(h) {
 			t.Fatalf("Missing %x", h)
+		}
+	}
+}
+
+func TestCopy(t *testing.T) {
+	initTestHashset()
+
+	h2 := aBigHashset.Copy()
+	for h := range aBigHashset.Iter() {
+		if !h2.Contains(h) {
+			t.Errorf("Copy doesn't have %x", h)
 		}
 	}
 }
