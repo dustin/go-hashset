@@ -248,6 +248,35 @@ func TestCopy(t *testing.T) {
 	}
 }
 
+func BenchmarkUnion(b *testing.B) {
+	b.StopTimer()
+	randomSrc := &randomDataMaker{rand.NewSource(1028890720402726901)}
+	samples := [][]byte{}
+	// Enough hashes to surely hit all the cases
+	for i := 0; i < 65535*5; i++ {
+		buf := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+		_, err := io.ReadFull(randomSrc, buf)
+		if err != nil {
+			panic(err)
+		}
+		samples = append(samples, buf)
+	}
+
+	hss := []*Hashset{&Hashset{}, &Hashset{}}
+	for i, h := range samples {
+		hss[i%len(hss)].Add(h)
+	}
+
+	for i := 0; i < b.N; i++ {
+		tmp := hss[0].Copy()
+
+		b.StartTimer()
+		tmp.AddAll(hss[1])
+		b.StopTimer()
+	}
+}
+
 func BenchmarkSet(b *testing.B) {
 	hs := Hashset{}
 	randomSrc := &randomDataMaker{rand.NewSource(1028890720402726901)}
