@@ -147,3 +147,33 @@ func Load(size int, r io.Reader) (*Hashset, error) {
 		hs.Add(buf)
 	}
 }
+
+// Update this Hashset by adding all hashes from another Hashset.
+//
+// Both hashsets are required to be representing the same size hashes.
+func (hs *Hashset) AddAll(o *Hashset) {
+	if o.size == 0 {
+		return
+	}
+	if hs.size != o.size {
+		panic("hash size mismatch")
+	}
+	l := hs.size - 2
+	for pre, bin := range hs.things {
+		thisSize := len(bin) / l
+		for i := 0; i < len(o.things[pre])/l; i++ {
+			off := i * l
+			sub := o.things[pre][off : off+l]
+			pos := sort.Search(thisSize, func(p int) bool {
+				o := p * l
+				return bytes.Compare(bin[o:o+l], sub) >= 0
+			})
+			off = pos * l
+			if !(off < (thisSize*l) && bytes.Equal(sub, bin[off:off+l])) {
+				hs.things[pre] = append(hs.things[pre], sub...)
+			}
+		}
+		sorter := hashSorter{hs.sortbuf, hs.things[pre], l}
+		sort.Sort(&sorter)
+	}
+}

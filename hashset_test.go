@@ -209,6 +209,35 @@ func TestSet(t *testing.T) {
 
 }
 
+func TestUnion(t *testing.T) {
+	randomSrc := &randomDataMaker{rand.NewSource(1028890720402726901)}
+	samples := [][]byte{}
+	// Enough hashes to surely hit all the cases
+	for i := 0; i < 65535*5; i++ {
+		buf := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+		_, err := io.ReadFull(randomSrc, buf)
+		if err != nil {
+			panic(err)
+		}
+		samples = append(samples, buf)
+	}
+
+	hss := []*Hashset{&Hashset{}, &Hashset{}}
+	for i, h := range samples {
+		hss[i%len(hss)].Add(h)
+	}
+
+	hss[0].AddAll(&Hashset{}) // noop
+	hss[0].AddAll(hss[1])
+
+	for _, h := range samples {
+		if !hss[0].Contains(h) {
+			t.Fatalf("Missing %x", h)
+		}
+	}
+}
+
 func BenchmarkSet(b *testing.B) {
 	hs := Hashset{}
 	randomSrc := &randomDataMaker{rand.NewSource(1028890720402726901)}
