@@ -132,6 +132,9 @@ func (hs *Hashset) AddAll(o *Hashset) {
 	if o.size == 0 {
 		return
 	}
+	if hs.size == 0 {
+		hs.size = o.size
+	}
 	if hs.size != o.size {
 		panic("hash size mismatch")
 	}

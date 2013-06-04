@@ -237,6 +237,27 @@ func TestUnion(t *testing.T) {
 	}
 }
 
+func TestEmptyUnion(t *testing.T) {
+	hs := &Hashset{}
+	someHashes := [][]byte{
+		d("c9adad8f9201c0cdcf68d0023b16f4979eb799c0"),
+		d("c9adad8f9201c0cdcf68d2023b16f4979eb799c0"),
+		d("d9adad8f9201c0cdcf68d2023b16f4979eb799c0"),
+	}
+	for _, h := range someHashes {
+		hs.Add(h)
+	}
+
+	h2 := &Hashset{}
+	h2.AddAll(hs)
+
+	for _, h := range someHashes {
+		if !h2.Contains(h) {
+			t.Errorf("Was missing %x", h)
+		}
+	}
+}
+
 func TestIntersection(t *testing.T) {
 	randomSrc := &randomDataMaker{rand.NewSource(1028890720402726901)}
 	hss := []*Hashset{&Hashset{}, &Hashset{},
