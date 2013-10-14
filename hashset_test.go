@@ -327,6 +327,34 @@ func TestCopy(t *testing.T) {
 	}
 }
 
+func TestAddMismatch(t *testing.T) {
+	var err interface{}
+	func() {
+		defer func() { err = recover() }()
+		h := &Hashset{}
+		h.Add(make([]byte, 4))
+		h.Add(make([]byte, 6))
+	}()
+	if err == nil {
+		t.Errorf("Expected error adding different-sized []byte")
+	}
+}
+
+func TestAddAllMismatch(t *testing.T) {
+	var err interface{}
+	func() {
+		defer func() { err = recover() }()
+		h1 := &Hashset{}
+		h1.Add(make([]byte, 4))
+		h2 := &Hashset{}
+		h2.Add(make([]byte, 6))
+		h1.AddAll(h2)
+	}()
+	if err == nil {
+		t.Errorf("Expected error adding different-sized Hashset")
+	}
+}
+
 func BenchmarkUnion(b *testing.B) {
 	b.StopTimer()
 	randomSrc := &randomDataMaker{rand.NewSource(1028890720402726901)}
