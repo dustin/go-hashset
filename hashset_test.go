@@ -132,6 +132,24 @@ func TestWrite(t *testing.T) {
 	}
 }
 
+type ErrorWriter struct{ error }
+
+func (ew *ErrorWriter) Write(b []byte) (int, error) {
+	return 19, error(ew.error)
+}
+
+func TestWriteError(t *testing.T) {
+	initTestHashset()
+	ew := &ErrorWriter{io.ErrUnexpectedEOF}
+	n, err := aBigHashset.Write(ew)
+	if n != 19 {
+		t.Errorf("Expected to write 19 bytes, wrote %v", n)
+	}
+	if err != io.ErrUnexpectedEOF {
+		t.Errorf("Expected the unexpected, got %v", err)
+	}
+}
+
 func TestRead(t *testing.T) {
 	someHashes := [][]byte{
 		d("c9adad8f9201c0cdcf68d0023b16f4979eb799c0"),
