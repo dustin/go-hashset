@@ -130,7 +130,10 @@ func (hs *Hashset) Write(w io.Writer) (int64, error) {
 	return written, nil
 }
 
-// Load hashes from a reader.
+// Load hashes from a reader.  This is meant to load hashes that were
+// dumped by Write, so it makes some assumptions that will not be
+// valid in other cases.  In particular, if the input has duplicates,
+// so will the Hashset.
 //
 // The size of the hash must be known ahead of time.
 func Load(size int, r io.Reader) (*Hashset, error) {
@@ -143,7 +146,7 @@ func Load(size int, r io.Reader) (*Hashset, error) {
 			}
 			return hs, err
 		}
-		hs.Add(buf)
+		hs.UnsafeAdd(buf)
 	}
 }
 
