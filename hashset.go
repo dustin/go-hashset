@@ -11,11 +11,12 @@ import (
 // Store the hashes.
 type Hashset struct {
 	things  [65536][]byte
+	sorted  [65536]bool
 	sortbuf []byte
 	size    int
 }
 
-// Add a hash to the Hashset.Add
+// Add a hash to the Hashset.
 //
 // This is the []byte representation of a hash.  You *can* hex encode
 // it, but you probably shouldn't.
@@ -24,6 +25,17 @@ func (hs *Hashset) Add(h []byte) {
 		return
 	}
 
+	hs.UnsafeAdd(h)
+}
+
+// UnsafeAdd adds a hash to the Hashset without confirming it's there
+// already.  Note that this isn't unsafe in the sense that presence
+// checking will fail, but if you give it duplicates, they will be
+// emitted on iteration and it will obviously take more RAM.
+//
+// This is the []byte representation of a hash.  You *can* hex encode
+// it, but you probably shouldn't.
+func (hs *Hashset) UnsafeAdd(h []byte) {
 	if hs.size == 0 {
 		hs.size = len(h)
 		hs.sortbuf = make([]byte, hs.size)
@@ -34,8 +46,15 @@ func (hs *Hashset) Add(h []byte) {
 	n := int(binary.BigEndian.Uint16(h))
 
 	hs.things[n] = append(hs.things[n], h[2:]...)
-	sorter := hashSorter{hs.sortbuf, hs.things[n], hs.size - 2}
-	sorter.Sort()
+	hs.sorted[n] = false
+}
+
+func (hs *Hashset) ensureSorted(bin int) {
+	if !hs.sorted[bin] {
+		sorter := hashSorter{hs.sortbuf, hs.things[bin], hs.size - 2}
+		sorter.Sort()
+		hs.sorted[bin] = true
+	}
 }
 
 // Return true if the given hash is in this Hashset.
@@ -45,6 +64,7 @@ func (hs *Hashset) Contains(h []byte) bool {
 	if len(bin) == 0 {
 		return false
 	}
+	hs.ensureSorted(n)
 	sub := h[2:]
 	l := hs.size - 2
 	pos := sort.Search(len(bin)/l, func(i int) bool {
@@ -74,6 +94,7 @@ func (hs *Hashset) Iter() <-chan []byte {
 		defer close(ch)
 		l := hs.size - 2
 		for pre, p := range hs.things {
+			hs.ensureSorted(pre)
 			for i := 0; i < len(p)/l; i++ {
 				off := i * l
 				rv := make([]byte, hs.size)
@@ -94,6 +115,7 @@ func (hs *Hashset) Write(w io.Writer) (int64, error) {
 	l := hs.size - 2
 	buf := make([]byte, hs.size)
 	for pre, p := range hs.things {
+		hs.ensureSorted(pre)
 		for i := 0; i < len(p)/l; i++ {
 			off := i * l
 			binary.BigEndian.PutUint16(buf, uint16(pre))
@@ -164,11 +186,13 @@ func Intersection(base *Hashset, sets ...*Hashset) *Hashset {
 
 	l := base.size - 2
 	for pre, bin := range base.things {
+		base.ensureSorted(pre)
 		for i := 0; i < len(bin)/l; i++ {
 			found := true
 			off := i * l
 			sub := bin[off : off+l]
 			for _, hs := range sets {
+				hs.ensureSorted(pre)
 				hbin := hs.things[pre]
 				thisSize := len(hbin) / l
 				pos := sort.Search(thisSize, func(p int) bool {
@@ -195,6 +219,7 @@ func Intersection(base *Hashset, sets ...*Hashset) *Hashset {
 func (hs *Hashset) Copy() *Hashset {
 	rv := &Hashset{sortbuf: make([]byte, hs.size), size: hs.size}
 	for i, p := range hs.things {
+		rv.sorted[i] = hs.sorted[i]
 		rv.things[i] = make([]byte, len(p))
 		copy(rv.things[i], p)
 	}

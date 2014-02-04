@@ -417,6 +417,21 @@ func BenchmarkSet(b *testing.B) {
 	}
 }
 
+func BenchmarkSetNoCheck(b *testing.B) {
+	hs := Hashset{}
+	randomSrc := &randomDataMaker{rand.NewSource(1028890720402726901)}
+	b.ResetTimer()
+
+	h := make([]byte, 20)
+	for i := 0; i < b.N; i++ {
+		_, err := io.ReadFull(randomSrc, h)
+		if err != nil {
+			panic(err)
+		}
+		hs.UnsafeAdd(h)
+	}
+}
+
 var aBigHashset *Hashset
 
 func initTestHashset() {
