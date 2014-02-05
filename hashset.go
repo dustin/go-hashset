@@ -8,7 +8,7 @@ import (
 	"sort"
 )
 
-// Store the hashes.
+// Hashset stores a set of fixed size hash values.
 type Hashset struct {
 	things  [65536][]byte
 	sorted  [65536]bool
@@ -57,7 +57,7 @@ func (hs *Hashset) ensureSorted(bin int) {
 	}
 }
 
-// Return true if the given hash is in this Hashset.
+// Contains returns true if the given hash is in this Hashset.
 func (hs *Hashset) Contains(h []byte) bool {
 	n := int(binary.BigEndian.Uint16(h))
 	bin := hs.things[n]
@@ -75,7 +75,7 @@ func (hs *Hashset) Contains(h []byte) bool {
 	return off < len(bin) && bytes.Equal(sub, bin[off:off+l])
 }
 
-// How many things we've got.
+// Len returns the number of hashes contained in this Hashset.
 func (hs *Hashset) Len() int {
 	rv := 0
 	for _, a := range hs.things {
@@ -84,7 +84,7 @@ func (hs *Hashset) Len() int {
 	return rv
 }
 
-// Return a channel that emits all stored hashes.
+// Iter returns a channel that emits all stored hashes.
 //
 // As this returns a channel, the caller is expected to drain the
 // channel completely.
@@ -150,7 +150,8 @@ func Load(size int, r io.Reader) (*Hashset, error) {
 	}
 }
 
-// Update this Hashset by adding all hashes from another Hashset.
+// AddAll updates this Hashset by adding all hashes from another
+// Hashset.
 //
 // Both hashsets are required to be representing the same size hashes.
 func (hs *Hashset) AddAll(o *Hashset) {
@@ -183,7 +184,10 @@ func (hs *Hashset) AddAll(o *Hashset) {
 	}
 }
 
-// Compute the intersection of a bunch of Hashsets.
+// Intersection computes the intersection of a bunch of Hashsets.
+//
+// The returned Hashset contains all of the hashes that exist in every
+// input Hashset.
 func Intersection(base *Hashset, sets ...*Hashset) *Hashset {
 	rv := &Hashset{size: base.size, sortbuf: make([]byte, base.size)}
 
@@ -218,7 +222,7 @@ func Intersection(base *Hashset, sets ...*Hashset) *Hashset {
 	return rv
 }
 
-// Deep copy this hashset.
+// Copy returns a new Hashset that's a deep copy of this Hashset.
 func (hs *Hashset) Copy() *Hashset {
 	rv := &Hashset{sortbuf: make([]byte, hs.size), size: hs.size}
 	for i, p := range hs.things {
