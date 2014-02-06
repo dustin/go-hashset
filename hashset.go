@@ -57,6 +57,8 @@ func (hs *Hashset) ensureSorted(bin int) {
 	}
 }
 
+const sortThreshold = 100
+
 // Contains returns true if the given hash is in this Hashset.
 func (hs *Hashset) Contains(h []byte) bool {
 	n := int(binary.BigEndian.Uint16(h))
@@ -64,15 +66,27 @@ func (hs *Hashset) Contains(h []byte) bool {
 	if len(bin) == 0 {
 		return false
 	}
-	hs.ensureSorted(n)
 	sub := h[2:]
 	l := hs.size - 2
-	pos := sort.Search(len(bin)/l, func(i int) bool {
+
+	if len(bin)/l > sortThreshold {
+		hs.ensureSorted(n)
+		pos := sort.Search(len(bin)/l, func(i int) bool {
+			off := i * l
+			return bytes.Compare(bin[off:off+l], sub) >= 0
+		})
+		off := pos * l
+		return off < len(bin) && bytes.Equal(sub, bin[off:off+l])
+	}
+
+	for i := 0; i < len(bin)/l; i++ {
 		off := i * l
-		return bytes.Compare(bin[off:off+l], sub) >= 0
-	})
-	off := pos * l
-	return off < len(bin) && bytes.Equal(sub, bin[off:off+l])
+		if bytes.Equal(sub, bin[off:off+l]) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Len returns the number of hashes contained in this Hashset.

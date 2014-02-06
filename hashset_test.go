@@ -2,8 +2,10 @@ package hashset
 
 import (
 	"bytes"
+	"crypto/md5"
 	"encoding/binary"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -130,6 +132,58 @@ func TestWrite(t *testing.T) {
 	if !bytes.Equal(buf.Bytes(), exp) {
 		t.Fatalf("Expected\n%x, got\n%x", exp, buf.Bytes())
 	}
+}
+
+func TestContains(t *testing.T) {
+	hash := md5.New()
+	hashes := [][]byte{}
+	for i := 0; i < 10000; i++ {
+		hash.Reset()
+		fmt.Fprintf(hash, "%d", i)
+		hashes = append(hashes, append([]byte{0}, hash.Sum(nil)...))
+	}
+	hs := Hashset{}
+	for _, h := range hashes {
+		if hs.Contains(h) {
+			t.Errorf("Unexpected had %x before adding it", h)
+		}
+		hs.UnsafeAdd(h)
+		if !hs.Contains(h) {
+			t.Errorf("Failed to find %x", h)
+		}
+	}
+}
+
+func benchContains(b *testing.B, n int) {
+	hash := md5.New()
+	hashes := [][]byte{}
+	for i := 0; i < n; i++ {
+		hash.Reset()
+		fmt.Fprintf(hash, "%d", i)
+		hashes = append(hashes, append([]byte{0}, hash.Sum(nil)...))
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N/len(hashes); i++ {
+		hs := Hashset{}
+		for _, h := range hashes {
+			hs.UnsafeAdd(h)
+			if !hs.Contains(h) {
+				b.Errorf("Failed to find %x", h)
+			}
+		}
+	}
+}
+
+func BenchmarkContainsSmall(b *testing.B) {
+	benchContains(b, 100)
+}
+
+func BenchmarkContainsMedium(b *testing.B) {
+	benchContains(b, 1000)
+}
+
+func BenchmarkContainsLarge(b *testing.B) {
+	benchContains(b, 100000)
 }
 
 type ErrorWriter struct{ error }
