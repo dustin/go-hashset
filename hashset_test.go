@@ -137,7 +137,7 @@ func TestWrite(t *testing.T) {
 func TestContains(t *testing.T) {
 	hash := md5.New()
 	hashes := [][]byte{}
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 50000; i++ {
 		hash.Reset()
 		fmt.Fprintf(hash, "%d", i)
 		hashes = append(hashes, append([]byte{0}, hash.Sum(nil)...))
