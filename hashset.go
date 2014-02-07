@@ -181,6 +181,7 @@ func (hs *Hashset) AddAll(o *Hashset) {
 	l := hs.size - 2
 	for pre, bin := range hs.things {
 		thisSize := len(bin) / l
+		hs.ensureSorted(pre)
 		for i := 0; i < len(o.things[pre])/l; i++ {
 			off := i * l
 			sub := o.things[pre][off : off+l]
