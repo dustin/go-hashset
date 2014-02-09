@@ -5,7 +5,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"io"
+	"runtime"
 	"sort"
+	"sync"
 )
 
 // Hashset stores a set of fixed size hash values.
@@ -206,32 +208,48 @@ func Intersection(base *Hashset, sets ...*Hashset) *Hashset {
 	rv := &Hashset{size: base.size, sortbuf: make([]byte, base.size)}
 
 	l := base.size - 2
-	for pre, bin := range base.things {
-		base.ensureSorted(pre)
-		for i := 0; i < len(bin)/l; i++ {
-			found := true
-			off := i * l
-			sub := bin[off : off+l]
-			for _, hs := range sets {
-				hs.ensureSorted(pre)
-				hbin := hs.things[pre]
-				thisSize := len(hbin) / l
-				pos := sort.Search(thisSize, func(p int) bool {
-					o := p * l
-					return bytes.Compare(hbin[o:o+l], sub) >= 0
-				})
-				off = pos * l
-				if !(off < (thisSize*l) &&
-					bytes.Equal(sub, hbin[off:off+l])) {
-					found = false
-					break
+	wg := sync.WaitGroup{}
+	ch := make(chan int, len(base.things))
+
+	for i := 0; i < runtime.NumCPU(); i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for pre := range ch {
+				bin := base.things[pre]
+				base.ensureSorted(pre)
+				for i := 0; i < len(bin)/l; i++ {
+					found := true
+					off := i * l
+					sub := bin[off : off+l]
+					for _, hs := range sets {
+						hs.ensureSorted(pre)
+						hbin := hs.things[pre]
+						thisSize := len(hbin) / l
+						pos := sort.Search(thisSize, func(p int) bool {
+							o := p * l
+							return bytes.Compare(hbin[o:o+l], sub) >= 0
+						})
+						off = pos * l
+						if !(off < (thisSize*l) &&
+							bytes.Equal(sub, hbin[off:off+l])) {
+							found = false
+							break
+						}
+					}
+					if found {
+						rv.things[pre] = append(rv.things[pre], sub...)
+					}
 				}
 			}
-			if found {
-				rv.things[pre] = append(rv.things[pre], sub...)
-			}
-		}
+		}()
 	}
+
+	for pre := range base.things {
+		ch <- pre
+	}
+	close(ch)
+	wg.Wait()
 
 	return rv
 }
