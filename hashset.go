@@ -192,10 +192,9 @@ func (hs *Hashset) AddAll(o *Hashset) {
 			off = pos * l
 			if !(off < (thisSize*l) && bytes.Equal(sub, bin[off:off+l])) {
 				hs.things[pre] = append(hs.things[pre], sub...)
+				hs.sorted[pre] = false
 			}
 		}
-		sorter := hashSorter{hs.sortbuf, hs.things[pre], l}
-		sorter.Sort()
 	}
 }
 
