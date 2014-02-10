@@ -166,6 +166,11 @@ func Load(size int, r io.Reader) (*Hashset, error) {
 	}
 }
 
+type res struct {
+	pos int
+	val []byte
+}
+
 // AddAll updates this Hashset by adding all hashes from another
 // Hashset.
 //
@@ -181,22 +186,43 @@ func (hs *Hashset) AddAll(o *Hashset) {
 		panic("hash size mismatch")
 	}
 	l := hs.size - 2
-	for pre, bin := range hs.things {
-		thisSize := len(bin) / l
-		hs.ensureSorted(pre, hs.sortbuf)
-		for i := 0; i < len(o.things[pre])/l; i++ {
-			off := i * l
-			sub := o.things[pre][off : off+l]
-			pos := sort.Search(thisSize, func(p int) bool {
-				o := p * l
-				return bytes.Compare(bin[o:o+l], sub) >= 0
-			})
-			off = pos * l
-			if !(off < (thisSize*l) && bytes.Equal(sub, bin[off:off+l])) {
-				hs.things[pre] = append(hs.things[pre], sub...)
-				hs.sorted[pre] = false
+	ch := make(chan int, len(hs.things))
+	rvch := make(chan res)
+
+	for c := 0; c < runtime.NumCPU(); c++ {
+		go func() {
+			mybuf := make([]byte, len(hs.sortbuf))
+			for pre := range ch {
+				val := hs.things[pre]
+				bin := hs.things[pre]
+				thisSize := len(bin) / l
+				hs.ensureSorted(pre, mybuf)
+				for i := 0; i < len(o.things[pre])/l; i++ {
+					off := i * l
+					sub := o.things[pre][off : off+l]
+					pos := sort.Search(thisSize, func(p int) bool {
+						o := p * l
+						return bytes.Compare(bin[o:o+l], sub) >= 0
+					})
+					off = pos * l
+					if !(off < (thisSize*l) && bytes.Equal(sub, bin[off:off+l])) {
+						val = append(val, sub...)
+					}
+				}
+				rvch <- res{pre, val}
 			}
-		}
+		}()
+
+	}
+
+	for pre := range hs.things {
+		ch <- pre
+	}
+	close(ch)
+	for _ = range hs.things {
+		r := <-rvch
+		hs.things[r.pos] = r.val
+		hs.sorted[r.pos] = false
 	}
 }
 
