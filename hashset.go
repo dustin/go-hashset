@@ -51,9 +51,9 @@ func (hs *Hashset) UnsafeAdd(h []byte) {
 	hs.sorted[n] = false
 }
 
-func (hs *Hashset) ensureSorted(bin int) {
+func (hs *Hashset) ensureSorted(bin int, buf []byte) {
 	if !hs.sorted[bin] {
-		sorter := hashSorter{hs.sortbuf, hs.things[bin], hs.size - 2}
+		sorter := hashSorter{buf, hs.things[bin], hs.size - 2}
 		sorter.Sort()
 		hs.sorted[bin] = true
 	}
@@ -72,7 +72,7 @@ func (hs *Hashset) Contains(h []byte) bool {
 	l := hs.size - 2
 
 	if len(bin)/l > sortThreshold {
-		hs.ensureSorted(n)
+		hs.ensureSorted(n, hs.sortbuf)
 		pos := sort.Search(len(bin)/l, func(i int) bool {
 			off := i * l
 			return bytes.Compare(bin[off:off+l], sub) >= 0
@@ -110,7 +110,7 @@ func (hs *Hashset) Iter() <-chan []byte {
 		defer close(ch)
 		l := hs.size - 2
 		for pre, p := range hs.things {
-			hs.ensureSorted(pre)
+			hs.ensureSorted(pre, hs.sortbuf)
 			for i := 0; i < len(p)/l; i++ {
 				off := i * l
 				rv := make([]byte, hs.size)
@@ -131,7 +131,7 @@ func (hs *Hashset) Write(w io.Writer) (int64, error) {
 	l := hs.size - 2
 	buf := make([]byte, hs.size)
 	for pre, p := range hs.things {
-		hs.ensureSorted(pre)
+		hs.ensureSorted(pre, hs.sortbuf)
 		for i := 0; i < len(p)/l; i++ {
 			off := i * l
 			binary.BigEndian.PutUint16(buf, uint16(pre))
@@ -183,7 +183,7 @@ func (hs *Hashset) AddAll(o *Hashset) {
 	l := hs.size - 2
 	for pre, bin := range hs.things {
 		thisSize := len(bin) / l
-		hs.ensureSorted(pre)
+		hs.ensureSorted(pre, hs.sortbuf)
 		for i := 0; i < len(o.things[pre])/l; i++ {
 			off := i * l
 			sub := o.things[pre][off : off+l]
@@ -215,15 +215,16 @@ func Intersection(base *Hashset, sets ...*Hashset) *Hashset {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			mybuf := make([]byte, len(base.sortbuf))
 			for pre := range ch {
 				bin := base.things[pre]
-				base.ensureSorted(pre)
+				base.ensureSorted(pre, mybuf)
 				for i := 0; i < len(bin)/l; i++ {
 					found := true
 					off := i * l
 					sub := bin[off : off+l]
 					for _, hs := range sets {
-						hs.ensureSorted(pre)
+						hs.ensureSorted(pre, mybuf)
 						hbin := hs.things[pre]
 						thisSize := len(hbin) / l
 						pos := sort.Search(thisSize, func(p int) bool {
