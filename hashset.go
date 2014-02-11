@@ -189,7 +189,7 @@ func (hs *Hashset) AddAll(o *Hashset) {
 	ch := make(chan int, len(hs.things))
 	rvch := make(chan res)
 
-	for c := 0; c < runtime.NumCPU(); c++ {
+	for c := 0; c < runtime.GOMAXPROCS(0); c++ {
 		go func() {
 			mybuf := make([]byte, len(hs.sortbuf))
 			for pre := range ch {
@@ -237,7 +237,7 @@ func Intersection(base *Hashset, sets ...*Hashset) *Hashset {
 	wg := sync.WaitGroup{}
 	ch := make(chan int, len(base.things))
 
-	for i := 0; i < runtime.NumCPU(); i++ {
+	for i := 0; i < runtime.GOMAXPROCS(0); i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
