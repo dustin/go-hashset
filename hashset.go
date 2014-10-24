@@ -1,4 +1,7 @@
 // Package hashset implements a "set" type store for hashes.
+//
+// Hashes are the primary use, but you can store any type of
+// fixed-length binary data.
 package hashset
 
 import (
@@ -10,7 +13,7 @@ import (
 	"sync"
 )
 
-// Hashset stores a set of fixed size hash values.
+// Hashset stores a set of fixed size []byte values.
 type Hashset struct {
 	things  [65536][]byte
 	sorted  [65536]bool
