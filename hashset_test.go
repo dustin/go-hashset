@@ -103,6 +103,38 @@ func TestIter(t *testing.T) {
 	}
 }
 
+func TestFuncIter(t *testing.T) {
+	someHashes := [][]byte{
+		d("c9adad8f9201c0cdcf68d0023b16f4979eb799c0"),
+		d("d9adad8f9201c0cdcf68d2023b16f4979eb799c0"),
+		d("c9adad8f9201c0cdcf68d2023b16f4979eb799c0"),
+		d("c9adad8f9201c0cdcf68d2023b16f4979eb799c0"),
+	}
+
+	exp := [][]byte{
+		d("c9adad8f9201c0cdcf68d0023b16f4979eb799c0"),
+		d("c9adad8f9201c0cdcf68d2023b16f4979eb799c0"),
+		d("d9adad8f9201c0cdcf68d2023b16f4979eb799c0"),
+	}
+
+	hs := Hashset{}
+	for _, h := range someHashes {
+		hs.Add(h)
+	}
+
+	i := 0
+	hs.FuncIter(func(got []byte) {
+		e := exp[i]
+		if !bytes.Equal(e, got) {
+			t.Errorf("Expected %x at %v, got %x", e, i, got)
+		}
+		i++
+	})
+	if i != len(exp) {
+		t.Errorf("Expected %d items, got %d", len(exp), i)
+	}
+}
+
 func TestWrite(t *testing.T) {
 	someHashes := [][]byte{
 		d("c9adad8f9201c0cdcf68d0023b16f4979eb799c0"),

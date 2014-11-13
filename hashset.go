@@ -111,19 +111,26 @@ func (hs *Hashset) Iter() <-chan []byte {
 	ch := make(chan []byte)
 	go func() {
 		defer close(ch)
-		l := hs.size - 2
-		for pre, p := range hs.things {
-			hs.ensureSorted(pre, hs.sortbuf)
-			for i := 0; i < len(p)/l; i++ {
-				off := i * l
-				rv := make([]byte, hs.size)
-				binary.BigEndian.PutUint16(rv, uint16(pre))
-				copy(rv[2:], p[off:])
-				ch <- rv
-			}
-		}
+		hs.FuncIter(func(b []byte) {
+			ch <- b
+		})
 	}()
 	return ch
+}
+
+// FuncIter iterates all stored hashes and passes each to the given func.
+func (hs *Hashset) FuncIter(f func([]byte)) {
+	l := hs.size - 2
+	for pre, p := range hs.things {
+		hs.ensureSorted(pre, hs.sortbuf)
+		for i := 0; i < len(p)/l; i++ {
+			off := i * l
+			rv := make([]byte, hs.size)
+			binary.BigEndian.PutUint16(rv, uint16(pre))
+			copy(rv[2:], p[off:])
+			f(rv)
+		}
+	}
 }
 
 // Persist this hashset to the given writer.
