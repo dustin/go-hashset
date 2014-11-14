@@ -571,3 +571,36 @@ func BenchmarkRead(b *testing.B) {
 		b.Fatalf("Error reading at %v", b.N)
 	}
 }
+
+func mkBigHashset(t testing.TB, size int) *Hashset {
+	randomSrc := &randomDataMaker{rand.NewSource(1028890720402726901)}
+	h, err := Load(20, io.LimitReader(randomSrc, int64(size)))
+	if err != nil {
+		t.Fatalf("Error reading: %v", err)
+	}
+	if b, ok := t.(*testing.B); ok {
+		b.SetBytes(int64(size))
+	}
+	return h
+}
+
+func BenchmarkIterateChan(b *testing.B) {
+	const size = 20 * (1024 * 1024)
+	h := mkBigHashset(b, size)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		for _ = range h.Iter() {
+		}
+	}
+}
+
+func BenchmarkIterateFunc(b *testing.B) {
+	const size = 20 * (1024 * 1024)
+	h := mkBigHashset(b, size)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		h.FuncIter(func([]byte) {})
+	}
+}
