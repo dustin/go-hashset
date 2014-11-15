@@ -112,7 +112,9 @@ func (hs *Hashset) Iter() <-chan []byte {
 	go func() {
 		defer close(ch)
 		hs.FuncIter(func(b []byte) bool {
-			ch <- b
+			cp := make([]byte, len(b))
+			copy(cp, b)
+			ch <- cp
 			return true
 		})
 	}()
@@ -120,13 +122,17 @@ func (hs *Hashset) Iter() <-chan []byte {
 }
 
 // FuncIter iterates all stored hashes and passes each to the given func.
+//
+// Notice: the buffer is reused, so if you intend to hang on to this
+// slice across multiple invocations of your func, you need to copy
+// the bytes into something else.
 func (hs *Hashset) FuncIter(f func([]byte) bool) {
+	rv := make([]byte, hs.size)
 	l := hs.size - 2
 	for pre, p := range hs.things {
 		hs.ensureSorted(pre, hs.sortbuf)
 		for i := 0; i < len(p)/l; i++ {
 			off := i * l
-			rv := make([]byte, hs.size)
 			binary.BigEndian.PutUint16(rv, uint16(pre))
 			copy(rv[2:], p[off:])
 			if !f(rv) {
