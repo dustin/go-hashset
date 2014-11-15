@@ -111,15 +111,16 @@ func (hs *Hashset) Iter() <-chan []byte {
 	ch := make(chan []byte)
 	go func() {
 		defer close(ch)
-		hs.FuncIter(func(b []byte) {
+		hs.FuncIter(func(b []byte) bool {
 			ch <- b
+			return true
 		})
 	}()
 	return ch
 }
 
 // FuncIter iterates all stored hashes and passes each to the given func.
-func (hs *Hashset) FuncIter(f func([]byte)) {
+func (hs *Hashset) FuncIter(f func([]byte) bool) {
 	l := hs.size - 2
 	for pre, p := range hs.things {
 		hs.ensureSorted(pre, hs.sortbuf)
@@ -128,7 +129,9 @@ func (hs *Hashset) FuncIter(f func([]byte)) {
 			rv := make([]byte, hs.size)
 			binary.BigEndian.PutUint16(rv, uint16(pre))
 			copy(rv[2:], p[off:])
-			f(rv)
+			if !f(rv) {
+				return
+			}
 		}
 	}
 }
