@@ -123,6 +123,9 @@ func (hs *Hashset) Iter() <-chan []byte {
 
 // FuncIter iterates all stored hashes and passes each to the given func.
 //
+// Iteration stops after iterating all stored hashes, or if the
+// iteration function returns false.
+//
 // Notice: the buffer is reused, so if you intend to hang on to this
 // slice across multiple invocations of your func, you need to copy
 // the bytes into something else.
