@@ -176,8 +176,8 @@ func (hs *Hashset) Write(w io.Writer) (int64, error) {
 // The size of the hash must be known ahead of time.
 func Load(size int, r io.Reader) (*Hashset, error) {
 	hs := &Hashset{}
+	buf := make([]byte, size)
 	for {
-		buf := make([]byte, size)
 		if _, err := io.ReadFull(r, buf); err != nil {
 			if err == io.EOF {
 				err = nil
