@@ -11,6 +11,7 @@ import (
 	"log"
 	"math/rand"
 	"testing"
+	"testing/quick"
 )
 
 type randomDataMaker struct {
@@ -490,6 +491,24 @@ func TestAddAllMismatch(t *testing.T) {
 	}()
 	if err == nil {
 		t.Errorf("Expected error adding different-sized Hashset")
+	}
+}
+
+func TestQuick(t *testing.T) {
+	f := func(a [][32]byte) bool {
+		h := new(Hashset)
+		for _, x := range a {
+			h.Add(x[:])
+		}
+		for _, x := range a {
+			if !h.Contains(x[:]) {
+				return false
+			}
+		}
+		return true
+	}
+	if err := quick.Check(f, nil); err != nil {
+		t.Error(err)
 	}
 }
 
