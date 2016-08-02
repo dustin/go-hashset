@@ -469,7 +469,7 @@ func TestAddMismatch(t *testing.T) {
 	var err interface{}
 	func() {
 		defer func() { err = recover() }()
-		h := &Hashset{}
+		h := new(Hashset)
 		h.Add(make([]byte, 4))
 		h.Add(make([]byte, 6))
 	}()
